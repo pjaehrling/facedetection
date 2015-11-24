@@ -64,7 +64,8 @@ public class FaceDetectionController {
 		loadImage(new File("gesicht.jpg"));
 		
 		thresholdSlider.valueProperty().addListener(new ChangeListener<Number>() {
-            public void changed(ObservableValue<? extends Number> ov, Number old_val, Number new_val) {
+            @Override
+			public void changed(ObservableValue<? extends Number> ov, Number old_val, Number new_val) {
             	thresholdValue.setText(String.format("%.2f", new_val));
             	runMethod(new ActionEvent());
             }
@@ -100,8 +101,8 @@ public class FaceDetectionController {
 	}
 	
 	public int[] imageToPixel(BufferedImage image) {
-		int width = (int)image.getWidth();
-		int height = (int)image.getHeight();
+		int width = image.getWidth();
+		int height = image.getHeight();
 		int[] pixels = new int[width * height];
 		image.getRGB(0, 0, width, height, pixels, 0, width);
 		return pixels;

@@ -83,11 +83,12 @@ public class FaceDetectionController {
 	public void loadImage(File file) {		
 		if(file != null) {
 			leftImageView.setImage(new Image(file.toURI().toString()));
-			cleanSrc = imageToPixel(leftImageView.getImage());
+			Image leftImage = leftImageView.getImage();
+			cleanSrc = imageToPixel(leftImage);
 			
-			// TODO erstelle ein eigenes Integral Bild hier
-		   	IntegralImage ii = null;
+		   	IntegralImage ii = new IntegralImageMJ(cleanSrc, (int)leftImage.getWidth(), (int)leftImage.getHeight());
 			image = TestImage.createJolieTestImage(ii);
+			// image = new TestImage(ii);
 			runMethod(null);
 		}		
 	}
@@ -144,6 +145,8 @@ public class FaceDetectionController {
 				break;
 			case IntegralBild:	// visualize the integral image
 				image.getIntegralImage().toIntARGB(dstPixels);
+				System.out.println( image.getIntegralImage().meanValue(0,0,1,1) );
+				System.out.println( image.getIntegralImage().meanValue(100,100,100,100) );
 	    		break;
 	    	case ViolaJones:	// run a full face detection
 	    		doVoilaJones(srcPixels, srcWidth, srcHeight, dstPixels, threshold);

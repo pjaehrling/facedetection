@@ -145,8 +145,6 @@ public class FaceDetectionController {
 				break;
 			case IntegralBild:	// visualize the integral image
 				image.getIntegralImage().toIntARGB(dstPixels);
-				System.out.println( image.getIntegralImage().meanValue(0,0,1,1) );
-				System.out.println( image.getIntegralImage().meanValue(100,100,100,100) );
 	    		break;
 	    	case ViolaJones:	// run a full face detection
 	    		doVoilaJones(srcPixels, srcWidth, srcHeight, dstPixels, threshold);

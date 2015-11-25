@@ -31,13 +31,15 @@ public class IntegralImageMJ implements IntegralImage {
 
 	@Override
 	public double meanValue(int x, int y, int areaWidth, int areaHeight) {
-		if (x < areaWidth && y < areaHeight) return 0;
+		// don't go beyond image boundaries
+		areaWidth = (x + areaWidth >= width) ? (width - x - 1) : areaWidth;
+		areaHeight = (y + areaHeight >= height) ? (height - y - 1) : areaHeight;
 		
 		// calculate positions in array
-		int bottomRight	= y * width + x;				// (x, y)
-		int bottomLeft 	= bottomRight - areaWidth;		// (x - width, y)
-		int topRight 	= (y - areaHeight) * width + x;	// (x, y - height)
-		int topLeft 	= topRight - areaWidth;			// (x - width, y - height)
+		int topLeft		= y * width + x;				// (x, y)
+		int topRight 	= topLeft + areaWidth;			// (x + areaWidth, y)
+		int bottomLeft 	= (y + areaHeight) * width + x;	// (x, y + areaHeight)
+		int bottomRight = bottomLeft + areaWidth;		// (x + areaWidth, y + areaHeight)
 		
 		// get sum and divide by number of pixels in area
 		int sum = ii[bottomRight] - ii[topRight] - ii[bottomLeft] + ii[topLeft];

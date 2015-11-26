@@ -26,6 +26,7 @@ import javafx.stage.FileChooser;
 import de.htw.ba.facedetection.IntegralImage;
 import de.htw.ba.facedetection.RandomClassifier;
 import de.htw.ba.facedetection.TestImage;
+import de.htw.cv.ue03.classifier.ClassifierMJ;
 
 public class FaceDetectionController {
 	
@@ -186,8 +187,20 @@ public class FaceDetectionController {
 	 */
     private void doVoilaJones(int srcPixels[], int srcWidth, int srcHeight, int dstPixels[], double threshold) 
     {    	
-    	// einfacher Klassifier mit zufälligem Ergebnis
-     	RandomClassifier classifier = new RandomClassifier(150, 215);
+    	// Create classifier size 1x2
+    	int width = 1;
+    	int height = 2;
+     	ClassifierMJ classifier = new ClassifierMJ(width, height);
+     	
+     	// Add horizontal edge to classifier
+		int halfHeight = (int) height / 2;
+		Rectangle top = new Rectangle(0, 0, width, halfHeight);
+		Rectangle bottom = new Rectangle(0, halfHeight, width, halfHeight);
+		classifier.addPlusPattern(bottom);
+		classifier.addMinusPattern(top);
+		
+		// Scale classifier to 15x30
+		classifier = (ClassifierMJ) classifier.getScaledInstance(15);
      	
      	// wie groß ist der Klassifier
 		Rectangle area = classifier.getArea();

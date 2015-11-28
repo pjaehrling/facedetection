@@ -27,6 +27,7 @@ import de.htw.ba.facedetection.IntegralImage;
 import de.htw.ba.facedetection.RandomClassifier;
 import de.htw.ba.facedetection.TestImage;
 import de.htw.cv.ue03.classifier.ClassifierMJ;
+import de.htw.cv.ue03.classifier.StrongClassifierMJ;
 
 public class FaceDetectionController {
 	
@@ -187,23 +188,35 @@ public class FaceDetectionController {
 	 */
     private void doVoilaJones(int srcPixels[], int srcWidth, int srcHeight, int dstPixels[], double threshold) 
     {    	
-    	// Create classifier size 1x2
     	int width = 1;
     	int height = 2;
-     	ClassifierMJ classifier = new ClassifierMJ(width, height);
-     	
-     	// Add horizontal edge to classifier
+     	ClassifierMJ horizontal = new ClassifierMJ(width, height);
 		int halfHeight = (int) height / 2;
 		Rectangle top = new Rectangle(0, 0, width, halfHeight);
 		Rectangle bottom = new Rectangle(0, halfHeight, width, halfHeight);
-		classifier.addPlusPattern(bottom);
-		classifier.addMinusPattern(top);
+		horizontal.addPlusPattern(bottom);
+		horizontal.addMinusPattern(top);
+		horizontal = (ClassifierMJ) horizontal.getScaledInstance(15);
+		horizontal.setWeight(0.25);
 		
-		// Scale classifier to 15x30
-		classifier = (ClassifierMJ) classifier.getScaledInstance(15);
+		width = 2;
+		height = 1;
+		ClassifierMJ vertical = new ClassifierMJ(width, height);
+		int halfWidth = (int) width / 2;
+		Rectangle left = new Rectangle(0, 0, halfWidth, height);
+		Rectangle right = new Rectangle(halfWidth, 0, halfWidth, height);
+		vertical.addPlusPattern(left);
+		vertical.addMinusPattern(right);
+		vertical = (ClassifierMJ) vertical.getScaledInstance(15);
+		vertical.setWeight(0.75);
+		
+		StrongClassifierMJ strong = new StrongClassifierMJ();
+		strong.addWeakClassifier(horizontal);
+		strong.addWeakClassifier(vertical);
+		strong = (StrongClassifierMJ) strong.getScaledInstance(2);
      	
      	// wie groß ist der Klassifier
-		Rectangle area = classifier.getArea();
+		Rectangle area = strong.getArea();
 
 		// durchlaufe das Bild, ignoriere die Ränder
      	for (int y = 0; y < srcHeight-area.getHeight()*0.8; y++) {	
@@ -211,7 +224,7 @@ public class FaceDetectionController {
 				int pos = y * srcWidth + x;
 				
 				// berechne den Korrelationswert an jeder Position
-				double correlation = classifier.matchAt(image, x, y);
+				double correlation = strong.matchAt(image, x, y, threshold);
 				
 				// zeichne das Korrelationsbild
 				int grey = (int)(correlation * 255.0);
@@ -229,7 +242,7 @@ public class FaceDetectionController {
     	
     	// zeichne die Gesichtsregionen ein
     	// TODO verwende hier die gefundenen Maximas
-     	classifier.drawAt(g2d, (int)faceRect.getX(), (int)faceRect.getY());
+     	strong.drawAt(g2d, (int)faceRect.getX(), (int)faceRect.getY());
      	
      	// schreibe die Kopie in die Eingangspixel zurück
     	g2d.dispose();

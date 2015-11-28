@@ -27,6 +27,8 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	public ImagePatternClassifier getScaledInstance(double scale) {	
 		ClassifierMJ scaled = new ClassifierMJ(area.width * scale, area.height * scale);
 		
+		scaled.weight = this.weight;
+		
 		for (Rectangle rec : plusAreas) {
 			scaled.addPlusPattern(scaleRec(rec, scale));
 		}
@@ -71,7 +73,8 @@ public class ClassifierMJ implements ImagePatternClassifier {
 
 	@Override
 	public double matchAt(TestImage image, int posX, int posY, double threshold) {
-		return matchAt(image, posX, posY) > threshold ? 1 : 0;
+		double match = matchAt(image, posX, posY);
+		return match > threshold ?  match : 0;
 	}
 	
 	private double normalize(double num, double min, double max) {

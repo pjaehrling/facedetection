@@ -1,6 +1,5 @@
 package de.htw.cv.ue03.classifier;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -100,9 +99,9 @@ public class StrongClassifierMJ implements ImagePatternClassifier {
 
 	@Override
 	public void drawAt(Graphics2D g2d, int x, int y) {
-//		Rectangle area = this.getArea();
-//		g2d.setColor(Color.RED);
-//    	g2d.drawRect(x + area.x, y + area.y, area.width, area.height);
+		Rectangle area = this.getArea();
+		g2d.setColor(Color.GREEN);
+    	g2d.drawRect(x + area.x, y + area.y, area.width, area.height);
     	
     	for (ImagePatternClassifier classifier : weakClassifiers) {
     		classifier.drawAt(g2d, x, y);

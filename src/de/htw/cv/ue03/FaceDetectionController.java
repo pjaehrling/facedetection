@@ -3,6 +3,7 @@
  */
 package de.htw.cv.ue03;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -196,37 +197,58 @@ public class FaceDetectionController {
     private void doVoilaJones(int srcPixels[], int srcWidth, int srcHeight, int dstPixels[], int dstWidth, int dstHeight, double threshold) 
     {    	
     	
-    	// Create weak classifier List
-    	ArrayList<ImagePatternClassifier> waekClassifiers = new ArrayList<ImagePatternClassifier>();
-    	
-    	// First classifier: forehead (light) and eye area (dark)
+    	// First two classifiers: eye (right/left) = forehead (light), eye area (dark), cheek (light)
     	ArrayList<Rectangle> plus = new ArrayList<Rectangle>();
     	ArrayList<Rectangle> minus = new ArrayList<Rectangle>();
-    	plus.add( new Rectangle(0, 2, 1, 1) ); // forehead - top
-    	plus.add( new Rectangle(2, 2, 1, 1) ); // forehead - top
-    	minus.add( new Rectangle(0, 3, 1, 1) ); // eye area - bottom
-    	minus.add( new Rectangle(2, 3, 1, 1) ); // eye area - bottom
-
-    	ImagePatternClassifier eyes = new ClassifierMJ(plus, minus, 0.5);
-    	eyes = eyes.getScaledInstance(40);
-    	waekClassifiers.add(eyes);
+    	plus.add( new Rectangle(0, 0, 1, 1) ); // forehead - top
+    	minus.add( new Rectangle(0, 1, 1, 1) ); // eye area - middle
+    	plus.add( new Rectangle(0, 2, 1, 1) ); // cheek - bottom
     	
-    	// Second classifier: hair (dark) and forehead (light)
+    	ImagePatternClassifier eyeLeft = new ClassifierMJ(0, 0, plus, minus, 0.3);
+    	ImagePatternClassifier eyeRight = new ClassifierMJ(2, 0, plus, minus, 0.3);
+    	eyeLeft = eyeLeft.getScaledInstance(48);
+    	eyeRight = eyeRight.getScaledInstance(48);
+    	
+    	
+    	// Second classifier: nose - left/right (dark) and inner (light)
     	plus = new ArrayList<Rectangle>();
     	minus = new ArrayList<Rectangle>();
-    	minus.add( new Rectangle(0, 0, 3, 1) ); // hair - top
-    	plus.add( new Rectangle(0, 1, 3, 1) ); // forehead - bottom    	
-
-    	ImagePatternClassifier forhead = new ClassifierMJ(plus, minus, 0.5);
-    	forhead = forhead.getScaledInstance(40);
-    	waekClassifiers.add(forhead);
+    	minus.add( new Rectangle(0, 0, 10, 60) ); // outer nose - left
+    	plus.add( new Rectangle(10, 0, 20, 60) ); // inner nose - middle
+    	minus.add( new Rectangle(30, 0, 10, 60) ); // outer nose - right   	
+    	ImagePatternClassifier nose = new ClassifierMJ(50, 60, plus, minus, 0.1);
+    	
+    	// Third classifier: nose end - top (dark) and bottom (light)
+    	plus = new ArrayList<Rectangle>();
+    	minus = new ArrayList<Rectangle>();
+    	minus.add( new Rectangle(0, 0, 40, 15) ); // end nose - top
+    	plus.add( new Rectangle(0, 15, 40, 15) ); // under nose - bottom
+    	ImagePatternClassifier noseEnd = new ClassifierMJ(50, 128, plus, minus, 0.2);
+ 
+    	
+    	// Third classifier: mouth - top (dark) and chin - bottom (light)
+    	plus = new ArrayList<Rectangle>();
+    	minus = new ArrayList<Rectangle>();
+    	minus.add( new Rectangle(0, 0, 60, 30) ); // mouth - top
+    	plus.add( new Rectangle(0, 30, 60, 30) ); // chin - bottom	
+    	ImagePatternClassifier mouth = new ClassifierMJ(45, 160, plus, minus, 0.1);
+  
+    	
+    	// Create weak classifier list and add classifiers
+    	ArrayList<ImagePatternClassifier> weakClassifiers = new ArrayList<ImagePatternClassifier>();
+    	weakClassifiers.add(eyeLeft);
+    	weakClassifiers.add(eyeRight);
+    	weakClassifiers.add(nose);
+    	weakClassifiers.add(noseEnd);
+    	weakClassifiers.add(mouth);
     	
     	// create strong classifier out of weak ones
-    	StrongClassifierMJ face = new StrongClassifierMJ(waekClassifiers);
+    	StrongClassifierMJ face = new StrongClassifierMJ(weakClassifiers);
      	
      	// wie groß ist der Klassifier
 		Rectangle area = face.getArea();
 
+		
 		// durchlaufe das Bild, ignoriere die Ränder
      	for (int y = 0; y < srcHeight-area.getHeight()*0.8; y++) {	
 			for (int x = 0; x < srcWidth-area.getWidth()*0.8; x++)	{
@@ -241,45 +263,76 @@ public class FaceDetectionController {
 			}
 		}
      	
-     	// TODO Actually use Maximas
-     	int[] maximas = new int[dstHeight * dstWidth];
-     	getCorrelationMaximas(dstPixels, maximas, 0.95);
-     	
-     	// TODO finde die Maximas im Korrelations-Bild
-     	Rectangle faceRect = image.getFaceRectangles().get(0); // ACHTUNG: vorgegebene Region
-     	
      	// erstelle eine Kopie vom Eingangsbild
 		BufferedImage bufferedImage = new BufferedImage(srcWidth, srcHeight, BufferedImage.TYPE_INT_ARGB);
     	bufferedImage.setRGB(0, 0, srcWidth, srcHeight, srcPixels, 0, srcWidth);
     	Graphics2D g2d = bufferedImage.createGraphics();
     	
-    	// zeichne die Gesichtsregionen ein
-    	// TODO verwende hier die gefundenen Maximas
-    	face.drawAt(g2d, (int)faceRect.getX(), (int)faceRect.getY());
+    	// Get maxims and draw strong classifier at max positions
+    	int[] maximas = new int[dstHeight * dstWidth];
+     	getCorrelationMaximas(dstPixels, maximas, dstWidth, dstHeight, 0.95);
+    	
+    	for (int y = 0; y < dstHeight; y++) {	
+			for (int x = 0; x < dstWidth; x++)	{
+				int pos = y * srcWidth + x;
+				
+				if (maximas[pos] == WHITE) {
+					face.drawAt(g2d, x, y);
+					
+					// TODO ... hacky break after one maxima was found
+					y = dstHeight;
+					x = dstWidth;
+				}
+					
+			}
+		}
      	
      	// schreibe die Kopie in die Eingangspixel zurück
     	g2d.dispose();
 		bufferedImage.getRGB(0, 0, srcWidth, srcHeight, srcPixels, 0, srcWidth);  
     }
     
-    private void getCorrelationMaximas(int srcPixels[], int dstPixels[], double threshold) {
+    /**
+     * 
+     * @param srcPixels
+     * @param dstPixels
+     * @param width
+     * @param height
+     * @param threshold
+     */
+    private void getCorrelationMaximas(int srcPixels[], int dstPixels[], int width, int height, double threshold) {
      	int min = getCorrelationMin(srcPixels);
     	int max = getCorrelationMax(srcPixels);
     	if (max - min == 0) {
     		return;
     	}
     	
-    	for (int i = 0; i < srcPixels.length; i++) {
-    		int grey = (srcPixels[i]>>16)&0xFF;
-    		double greyNorm = normalize(grey, min, max);
-    		if (greyNorm > threshold) {
-    			dstPixels[i] = WHITE;
-    		} else {
-    			dstPixels[i] = BLACK;
-    		}
+    	for (int y = 0; y < height; y++) {	
+			for (int x = 0; x < width; x++)	{
+				int pos = y * width + x;
+				
+				int grey = (srcPixels[pos] >> 16) & 0xFF;
+				double greyNorm = normalize(grey, min, max);
+    			
+	    		if (greyNorm > threshold && biggerThanNeighbours(srcPixels, x, y, width, height)) {
+	    			dstPixels[pos] = WHITE;
+	    			System.out.println("WHITE --> " + grey);
+	    		} else {
+	    			dstPixels[pos] = BLACK;
+	    		}
+			}
     	}	
     }
     
+    /**
+     * 
+     * @param array
+     * @param x
+     * @param y
+     * @param width
+     * @param height
+     * @return
+     */
 	private boolean biggerThanNeighbours(int array[], int x, int y, int width, int height)
 	{
 		int pos = y * width + x;
@@ -299,14 +352,26 @@ public class FaceDetectionController {
 		return true;
 	}
 	
-	private boolean isInImage(int  x, int y, int width, int height)
-	{
+	/**
+	 * 
+	 * @param x
+	 * @param y
+	 * @param width
+	 * @param height
+	 * @return
+	 */
+	private boolean isInImage(int  x, int y, int width, int height) {
 		return  x < width && 
 				x > -1 &&	
 				y < height &&
 				y > -1;
 	}
     
+	/**
+	 * 
+	 * @param srcPixels
+	 * @return
+	 */
     private int getCorrelationMin(int srcPixels[]) {
     	int min = 255;
     	
@@ -320,6 +385,11 @@ public class FaceDetectionController {
     	return min;
     }
     
+    /**
+     * 
+     * @param srcPixels
+     * @return
+     */
     private int getCorrelationMax(int srcPixels[]) {
     	int max = 0;
     	

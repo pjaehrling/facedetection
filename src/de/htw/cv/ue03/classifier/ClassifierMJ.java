@@ -29,8 +29,8 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	 * @param maxWidth
 	 * @param maxHeight
 	 */
-	public ClassifierMJ(int maxWidth, int maxHeight) {
-		this.area = new Rectangle(0, 0, maxWidth, maxHeight);
+	public ClassifierMJ(int x, int y, int maxWidth, int maxHeight) {
+		this.area = new Rectangle(x, y, maxWidth, maxHeight);
 		this.plusAreas = new ArrayList<Rectangle>();
 		this.minusAreas = new ArrayList<Rectangle>();
 	}
@@ -42,26 +42,33 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	 * @param minusAreas
 	 * @param weight
 	 */
-	public ClassifierMJ(ArrayList<Rectangle> plusAreas, ArrayList<Rectangle> minusAreas, double weight) {	
+	public ClassifierMJ(int x, int y, ArrayList<Rectangle> plusAreas, ArrayList<Rectangle> minusAreas, double weight) {	
+		this.area = new Rectangle(0, 0, 0, 0); // adding the plus and minus areas will change the position anyway
 		this.weight = weight;
 		this.plusAreas = new ArrayList<Rectangle>();
 		this.minusAreas = new ArrayList<Rectangle>();
-		this.area = new Rectangle(0, 0, 0, 0);
 		
 		for (Rectangle rec : plusAreas) {
-			this.area.add(rec); // resize the classifier rectangle		
+			this.area.add(rec); // resize the classifier rectangle -> will also change x/y!
 			this.addPlusPattern(rec); // add the area
 		}
 		for (Rectangle rec : minusAreas) {
-			this.area.add(rec); // resize the classifier rectangle	
+			this.area.add(rec); // resize the classifier rectangle -> will also change x/y!
 			this.addMinusPattern(rec); // add the area
 		}
+		
+		this.area.x = x;
+		this.area.y = y;
 	}
 
 	@Override
-	public ImagePatternClassifier getScaledInstance(double scale) {	
-		ClassifierMJ scaled = new ClassifierMJ((int)(area.width * scale), (int)(area.height * scale));
-		
+	public ImagePatternClassifier getScaledInstance(double scale) {			
+		ClassifierMJ scaled = new ClassifierMJ(
+			(int)(area.x * scale), 		// x
+			(int)(area.y * scale),		// y
+			(int)(area.width * scale),	// width
+			(int)(area.height * scale)	// height
+		);
 		scaled.weight = this.weight;
 		
 		for (Rectangle rec : plusAreas) {
@@ -133,11 +140,11 @@ public class ClassifierMJ implements ImagePatternClassifier {
 		int minusMean = 0;
 		
 		for (Rectangle r : plusAreas) {
-			plusMean += integral.meanValue(r.x + posX, r.y + posY, r.width, r.height);
+			plusMean += integral.meanValue(posX + area.x + r.x, posY + area.y + r.y, r.width, r.height);
 		}
 		
 		for (Rectangle r : minusAreas) {
-			minusMean += integral.meanValue(r.x + posX, r.y + posY, r.width, r.height);
+			minusMean += integral.meanValue(posX + area.x + r.x, posY + area.y + r.y, r.width, r.height);
 		}
 		
 		double correlation = Math.abs(plusMean - minusMean);
@@ -184,22 +191,19 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	}
 
 	@Override
-	public void drawAt(Graphics2D g2d, int x, int y) {
+	public void drawAt(Graphics2D g2d, int x, int y) {	
+		// System.out.println("draw Rect: " + area.x + "/" + area.y + " - " + area.width + "/" + area.height);
 		
-		g2d.setColor(Color.GREEN);
-		g2d.drawRect(x, y, area.width, area.height);
-		
-		Color plus = new Color(0x88FFFFFF, true);
+		Color plus = new Color(0x3300FF00, true);
 		for (Rectangle r : plusAreas) {
 			g2d.setColor(plus);
 			g2d.fillRect(x + area.x + r.x, y + area.y + r.y, r.width, r.height);
 		}
 		
-		Color minus = new Color(0x88000000, true);
+		Color minus = new Color(0x33FF0000, true);
 		for (Rectangle r : minusAreas) {
 			g2d.setColor(minus);
 			g2d.fillRect(x + area.x + r.x, y + area.y + r.y, r.width, r.height);
 		}
-		
 	}
 }

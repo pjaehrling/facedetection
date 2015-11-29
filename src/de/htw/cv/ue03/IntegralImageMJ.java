@@ -20,7 +20,7 @@ public class IntegralImageMJ implements IntegralImage {
 	 */
 	public IntegralImageMJ(int[] srcARGBPixel, int width, int height) {
 		// make sure all parameters are valid
-		assert width > 0 && height > 0 && srcARGBPixel.length > 0;
+		assert (width > 0 && height > 0 && srcARGBPixel.length > 0);
 		
 		this.width = width;
 		this.height = height;
@@ -31,6 +31,11 @@ public class IntegralImageMJ implements IntegralImage {
 
 	@Override
 	public double meanValue(int x, int y, int areaWidth, int areaHeight) {
+		// make sure the coordinates are in the image
+		if ( x >= width || y >= height ) return 0;
+		
+		// System.out.println(x + "/" + y + " --> " + areaWidth + "/" + areaHeight + " --> " + width + "/" + height);
+		
 		// don't go beyond image boundaries
 		areaWidth = (x + areaWidth >= width) ? (width - x - 1) : areaWidth;
 		areaHeight = (y + areaHeight >= height) ? (height - y - 1) : areaHeight;

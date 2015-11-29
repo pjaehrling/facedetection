@@ -33,6 +33,10 @@ import de.htw.cv.ue03.classifier.StrongClassifierMJ;
 public class FaceDetectionController {
 	
 	private enum Method { Graustufen, IntegralBild, ViolaJones };
+
+	private static final int WHITE = 0xFF000000 | (255<<16) | (255<<8) | 255;
+	private static final int BLACK = 0xFF000000 | (0<<16) | (0<<8) | 0;
+	private static final int NEIGHBOUR = 5;
 	
 	@FXML
 	private ImageView leftImageView;
@@ -150,7 +154,7 @@ public class FaceDetectionController {
 				image.getIntegralImage().toIntARGB(dstPixels);
 	    		break;
 	    	case ViolaJones:	// run a full face detection
-	    		doVoilaJones(srcPixels, srcWidth, srcHeight, dstPixels, threshold);
+	    		doVoilaJones(srcPixels, srcWidth, srcHeight, dstPixels, dstWidth, dstHeight, threshold);
 	    		break;
 		}
 		
@@ -184,10 +188,12 @@ public class FaceDetectionController {
 	 * @param srcWidth
 	 * @param srcHeight
 	 * @param dstPixels
+	 * @param dstWidth
+	 * @param dstHeight
 	 * @param threshold
 	 * @param scale
 	 */
-    private void doVoilaJones(int srcPixels[], int srcWidth, int srcHeight, int dstPixels[], double threshold) 
+    private void doVoilaJones(int srcPixels[], int srcWidth, int srcHeight, int dstPixels[], int dstWidth, int dstHeight, double threshold) 
     {    	
     	
     	// Create weak classifier List
@@ -235,6 +241,10 @@ public class FaceDetectionController {
 			}
 		}
      	
+     	// TODO Actually use Maximas
+     	int[] maximas = new int[dstHeight * dstWidth];
+     	getCorrelationMaximas(dstPixels, maximas, 0.95);
+     	
      	// TODO finde die Maximas im Korrelations-Bild
      	Rectangle faceRect = image.getFaceRectangles().get(0); // ACHTUNG: vorgegebene Region
      	
@@ -250,5 +260,88 @@ public class FaceDetectionController {
      	// schreibe die Kopie in die Eingangspixel zurück
     	g2d.dispose();
 		bufferedImage.getRGB(0, 0, srcWidth, srcHeight, srcPixels, 0, srcWidth);  
-    }    
+    }
+    
+    private void getCorrelationMaximas(int srcPixels[], int dstPixels[], double threshold) {
+     	int min = getCorrelationMin(srcPixels);
+    	int max = getCorrelationMax(srcPixels);
+    	if (max - min == 0) {
+    		return;
+    	}
+    	
+    	for (int i = 0; i < srcPixels.length; i++) {
+    		int grey = (srcPixels[i]>>16)&0xFF;
+    		double greyNorm = normalize(grey, min, max);
+    		if (greyNorm > threshold) {
+    			dstPixels[i] = WHITE;
+    		} else {
+    			dstPixels[i] = BLACK;
+    		}
+    	}	
+    }
+    
+	private boolean biggerThanNeighbours(int array[], int x, int y, int width, int height)
+	{
+		int pos = y * width + x;
+		int mid = NEIGHBOUR / 2;
+		for (int j = 0; j < NEIGHBOUR; j++) {
+			for (int i = 0; i < NEIGHBOUR; i++) {
+				int neighbourX = i - mid;
+				int neighbourY = j - mid;
+				int posComp = (y + neighbourY) * width + (x + neighbourX);
+				if (isInImage(x + neighbourX, y + neighbourY, width, height)) {
+					if (array[posComp] > array[pos]) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+	
+	private boolean isInImage(int  x, int y, int width, int height)
+	{
+		return  x < width && 
+				x > -1 &&	
+				y < height &&
+				y > -1;
+	}
+    
+    private int getCorrelationMin(int srcPixels[]) {
+    	int min = 255;
+    	
+    	for (int i = 0; i < srcPixels.length; i++) {
+    		int corr = (srcPixels[i]>>16)&0xFF;
+    		if (corr < min) {
+    			min = corr;
+    		}
+    	}
+  
+    	return min;
+    }
+    
+    private int getCorrelationMax(int srcPixels[]) {
+    	int max = 0;
+    	
+    	for (int i = 0; i < srcPixels.length; i++) {
+    		int corr = (srcPixels[i]>>16)&0xFF;
+    		if (corr > max) {
+    			max = corr;
+    		}
+    	}
+    	
+    	return max;
+    }
+    
+	/**
+	 * Normalize a given value (used e.g. to normalize the correlation value)
+	 * 
+	 * @param num
+	 * @param min
+	 * @param max
+	 * @return
+	 */
+	private double normalize(double num, double min, double max) {
+		return (num - min) / (max - min);
+	}
 }

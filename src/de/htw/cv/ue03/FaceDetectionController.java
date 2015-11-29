@@ -7,6 +7,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import javafx.beans.value.ChangeListener;
@@ -23,8 +24,8 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.stage.FileChooser;
+import de.htw.ba.facedetection.ImagePatternClassifier;
 import de.htw.ba.facedetection.IntegralImage;
-import de.htw.ba.facedetection.RandomClassifier;
 import de.htw.ba.facedetection.TestImage;
 import de.htw.cv.ue03.classifier.ClassifierMJ;
 import de.htw.cv.ue03.classifier.StrongClassifierMJ;
@@ -177,7 +178,7 @@ public class FaceDetectionController {
     }
     
 	/** 
-	 * TODO erstelle einige Weak Classifier und versuchte das Gesicht im Bild damit zu erkennen.
+	 * Erstelle einige Weak Classifier und versuchte das Gesicht im Bild damit zu erkennen.
 	 * 
 	 * @param srcPixels
 	 * @param srcWidth
@@ -188,35 +189,37 @@ public class FaceDetectionController {
 	 */
     private void doVoilaJones(int srcPixels[], int srcWidth, int srcHeight, int dstPixels[], double threshold) 
     {    	
-    	int width = 1;
-    	int height = 2;
-     	ClassifierMJ horizontal = new ClassifierMJ(width, height);
-		int halfHeight = (int) height / 2;
-		Rectangle top = new Rectangle(0, 0, width, halfHeight);
-		Rectangle bottom = new Rectangle(0, halfHeight, width, halfHeight);
-		horizontal.addPlusPattern(bottom);
-		horizontal.addMinusPattern(top);
-		horizontal = (ClassifierMJ) horizontal.getScaledInstance(15);
-		horizontal.setWeight(0.25);
-		
-		width = 2;
-		height = 1;
-		ClassifierMJ vertical = new ClassifierMJ(width, height);
-		int halfWidth = (int) width / 2;
-		Rectangle left = new Rectangle(0, 0, halfWidth, height);
-		Rectangle right = new Rectangle(halfWidth, 0, halfWidth, height);
-		vertical.addPlusPattern(left);
-		vertical.addMinusPattern(right);
-		vertical = (ClassifierMJ) vertical.getScaledInstance(15);
-		vertical.setWeight(0.75);
-		
-		StrongClassifierMJ strong = new StrongClassifierMJ();
-		strong.addWeakClassifier(horizontal);
-		strong.addWeakClassifier(vertical);
-		strong = (StrongClassifierMJ) strong.getScaledInstance(2);
+    	
+    	// Create weak classifier List
+    	ArrayList<ImagePatternClassifier> waekClassifiers = new ArrayList<ImagePatternClassifier>();
+    	
+    	// First classifier: forehead (light) and eye area (dark)
+    	ArrayList<Rectangle> plus = new ArrayList<Rectangle>();
+    	ArrayList<Rectangle> minus = new ArrayList<Rectangle>();
+    	plus.add( new Rectangle(0, 2, 1, 1) ); // forehead - top
+    	plus.add( new Rectangle(2, 2, 1, 1) ); // forehead - top
+    	minus.add( new Rectangle(0, 3, 1, 1) ); // eye area - bottom
+    	minus.add( new Rectangle(2, 3, 1, 1) ); // eye area - bottom
+
+    	ImagePatternClassifier eyes = new ClassifierMJ(plus, minus, 0.5);
+    	eyes = eyes.getScaledInstance(40);
+    	waekClassifiers.add(eyes);
+    	
+    	// Second classifier: hair (dark) and forehead (light)
+    	plus = new ArrayList<Rectangle>();
+    	minus = new ArrayList<Rectangle>();
+    	minus.add( new Rectangle(0, 0, 3, 1) ); // hair - top
+    	plus.add( new Rectangle(0, 1, 3, 1) ); // forehead - bottom    	
+
+    	ImagePatternClassifier forhead = new ClassifierMJ(plus, minus, 0.5);
+    	forhead = forhead.getScaledInstance(40);
+    	waekClassifiers.add(forhead);
+    	
+    	// create strong classifier out of weak ones
+    	StrongClassifierMJ face = new StrongClassifierMJ(waekClassifiers);
      	
      	// wie groß ist der Klassifier
-		Rectangle area = strong.getArea();
+		Rectangle area = face.getArea();
 
 		// durchlaufe das Bild, ignoriere die Ränder
      	for (int y = 0; y < srcHeight-area.getHeight()*0.8; y++) {	
@@ -224,9 +227,9 @@ public class FaceDetectionController {
 				int pos = y * srcWidth + x;
 				
 				// berechne den Korrelationswert an jeder Position
-				double correlation = strong.matchAt(image, x, y, threshold);
+				double correlation = face.matchAt(image, x, y, threshold);
 				
-				// zeichne das Korrelationsbild
+				// zeichne das Korrelationsbild 
 				int grey = (int)(correlation * 255.0);
 				dstPixels[pos] =  (0xFF << 24) | (grey << 16) | (grey << 8) | grey;	
 			}
@@ -242,7 +245,7 @@ public class FaceDetectionController {
     	
     	// zeichne die Gesichtsregionen ein
     	// TODO verwende hier die gefundenen Maximas
-     	strong.drawAt(g2d, (int)faceRect.getX(), (int)faceRect.getY());
+    	face.drawAt(g2d, (int)faceRect.getX(), (int)faceRect.getY());
      	
      	// schreibe die Kopie in die Eingangspixel zurück
     	g2d.dispose();

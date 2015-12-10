@@ -29,6 +29,11 @@ import de.htw.ba.facedetection.ImagePatternClassifier;
 import de.htw.ba.facedetection.IntegralImage;
 import de.htw.ba.facedetection.TestImage;
 import de.htw.cv.ue03.classifier.ClassifierMJ;
+import de.htw.cv.ue03.classifier.DiagonalClassifierMJ;
+import de.htw.cv.ue03.classifier.EdgeHorizontalClassifierMJ;
+import de.htw.cv.ue03.classifier.EdgeVerticalClassifierMJ;
+import de.htw.cv.ue03.classifier.LineHorizontalClassifierMJ;
+import de.htw.cv.ue03.classifier.LineVerticalClassifierMJ;
 import de.htw.cv.ue03.classifier.StrongClassifierMJ;
 
 public class FaceDetectionController {
@@ -196,7 +201,7 @@ public class FaceDetectionController {
 	 */
     private void doVoilaJones(int srcPixels[], int srcWidth, int srcHeight, int dstPixels[], int dstWidth, int dstHeight, double threshold) 
     {    	
-    	
+    	/*
     	// First two classifiers: eye (right/left) = forehead (light), eye area (dark), cheek (light)
     	ArrayList<Rectangle> plus = new ArrayList<Rectangle>();
     	ArrayList<Rectangle> minus = new ArrayList<Rectangle>();
@@ -204,8 +209,8 @@ public class FaceDetectionController {
     	minus.add( new Rectangle(0, 1, 1, 1) ); // eye area - middle
     	plus.add( new Rectangle(0, 2, 1, 1) ); // cheek - bottom
     	
-    	ImagePatternClassifier eyeLeft = new ClassifierMJ(0, 0, plus, minus, 0.3);
-    	ImagePatternClassifier eyeRight = new ClassifierMJ(2, 0, plus, minus, 0.3);
+    	ImagePatternClassifier eyeLeft = new ClassifierMJ(0, 0, plus, minus, 0.3, 0);
+    	ImagePatternClassifier eyeRight = new ClassifierMJ(2, 0, plus, minus, 0.3, 0);
     	eyeLeft = eyeLeft.getScaledInstance(48);
     	eyeRight = eyeRight.getScaledInstance(48);
     	
@@ -216,14 +221,14 @@ public class FaceDetectionController {
     	minus.add( new Rectangle(0, 0, 10, 60) ); // outer nose - left
     	plus.add( new Rectangle(10, 0, 20, 60) ); // inner nose - middle
     	minus.add( new Rectangle(30, 0, 10, 60) ); // outer nose - right   	
-    	ImagePatternClassifier nose = new ClassifierMJ(50, 60, plus, minus, 0.1);
+    	ImagePatternClassifier nose = new ClassifierMJ(50, 60, plus, minus, 0.1, 0);
     	
     	// Third classifier: nose end - top (dark) and bottom (light)
     	plus = new ArrayList<Rectangle>();
     	minus = new ArrayList<Rectangle>();
     	minus.add( new Rectangle(0, 0, 40, 15) ); // end nose - top
     	plus.add( new Rectangle(0, 15, 40, 15) ); // under nose - bottom
-    	ImagePatternClassifier noseEnd = new ClassifierMJ(50, 128, plus, minus, 0.2);
+    	ImagePatternClassifier noseEnd = new ClassifierMJ(50, 128, plus, minus, 0.2, 0);
  
     	
     	// Third classifier: mouth - top (dark) and chin - bottom (light)
@@ -231,8 +236,7 @@ public class FaceDetectionController {
     	minus = new ArrayList<Rectangle>();
     	minus.add( new Rectangle(0, 0, 60, 30) ); // mouth - top
     	plus.add( new Rectangle(0, 30, 60, 30) ); // chin - bottom	
-    	ImagePatternClassifier mouth = new ClassifierMJ(45, 160, plus, minus, 0.1);
-  
+    	ImagePatternClassifier mouth = new ClassifierMJ(45, 160, plus, minus, 0.1, 0);
     	
     	// Create weak classifier list and add classifiers
     	ArrayList<ImagePatternClassifier> weakClassifiers = new ArrayList<ImagePatternClassifier>();
@@ -241,7 +245,15 @@ public class FaceDetectionController {
     	weakClassifiers.add(nose);
     	weakClassifiers.add(noseEnd);
     	weakClassifiers.add(mouth);
+    	*/
     	
+    	ArrayList<ImagePatternClassifier> weakClassifiers = new ArrayList<ImagePatternClassifier>();
+    	weakClassifiers.add(new LineVerticalClassifierMJ(10, 0, 0.2, 0.0).getScaledInstance(20));
+    	weakClassifiers.add(new LineHorizontalClassifierMJ(0, 10, 0.2, 0.0).getScaledInstance(20));
+    	weakClassifiers.add(new DiagonalClassifierMJ(3, 3, 0.2, 0.0).getScaledInstance(20));
+    	weakClassifiers.add(new EdgeHorizontalClassifierMJ(0, 5, 0.2, 0.0).getScaledInstance(20));
+    	weakClassifiers.add(new EdgeVerticalClassifierMJ(5, 0, 0.2, 0.0).getScaledInstance(20));
+  
     	// create strong classifier out of weak ones
     	StrongClassifierMJ face = new StrongClassifierMJ(weakClassifiers);
      	

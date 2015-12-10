@@ -71,10 +71,10 @@ public class StrongClassifierMJ implements ImagePatternClassifier {
 		double match = 0;
 		
 		for (ImagePatternClassifier classifier : weakClassifiers) {
-			match += classifier.matchAt(image, posX, posY, threshold) * classifier.getWeight();
+			match += classifier.matchAt(image, posX, posY) * classifier.getWeight();
 		}
 		
-		return match;
+		return match > threshold ?  match : 0;
 	}
 
 	@Override

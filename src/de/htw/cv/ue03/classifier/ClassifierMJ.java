@@ -22,7 +22,16 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	private List<Rectangle> plusAreas;
 	private List<Rectangle> minusAreas;
 	private double weight;
+	private double treshold;
 	
+	public double getTreshold() {
+		return treshold;
+	}
+
+	public void setTreshold(double treshold) {
+		this.treshold = treshold;
+	}
+
 	/**
 	 * Create a weak classifier and set it's boundaries.
 	 * 
@@ -41,33 +50,34 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	 * @param plusAreas
 	 * @param minusAreas
 	 * @param weight
+	 * @param treshold
 	 */
-	public ClassifierMJ(int x, int y, ArrayList<Rectangle> plusAreas, ArrayList<Rectangle> minusAreas, double weight) {	
+	public ClassifierMJ(int x, int y, ArrayList<Rectangle> plusAreas, ArrayList<Rectangle> minusAreas, double weight, double treshold) {	
 		this.area = new Rectangle(0, 0, 0, 0); // adding the plus and minus areas will change the position anyway
 		this.weight = weight;
+		this.treshold = treshold;
 		this.plusAreas = new ArrayList<Rectangle>();
 		this.minusAreas = new ArrayList<Rectangle>();
 		
 		for (Rectangle rec : plusAreas) {
-			this.area.add(rec); // resize the classifier rectangle -> will also change x/y!
 			this.addPlusPattern(rec); // add the area
 		}
 		for (Rectangle rec : minusAreas) {
-			this.area.add(rec); // resize the classifier rectangle -> will also change x/y!
 			this.addMinusPattern(rec); // add the area
 		}
 		
 		this.area.x = x;
 		this.area.y = y;
 	}
-
+	
+	
 	@Override
 	public ImagePatternClassifier getScaledInstance(double scale) {			
 		ClassifierMJ scaled = new ClassifierMJ(
-			(int)(area.x * scale), 		// x
-			(int)(area.y * scale),		// y
-			(int)(area.width * scale),	// width
-			(int)(area.height * scale)	// height
+			(int)(area.x), 		// x
+			(int)(area.y),		// y
+			(int)(area.width),	// width
+			(int)(area.height)	// height
 		);
 		scaled.weight = this.weight;
 		
@@ -103,9 +113,8 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	 * @param rec
 	 */
 	public void addPlusPattern(Rectangle rec) {
-		if ( isInBoundaries(rec, area.width, area.height) ) {
-			plusAreas.add(rec);
-		}
+		this.area.add(rec); // resize the classifier rectangle -> will also change x/y!
+		plusAreas.add(rec); // add the area
 	}
 	
 	/**
@@ -114,9 +123,8 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	 * @param rec
 	 */
 	public void addMinusPattern(Rectangle rec) {
-		if ( isInBoundaries(rec, area.width, area.height) ) {
-			minusAreas.add(rec);
-		}
+		this.area.add(rec); // resize the classifier rectangle -> will also change x/y!
+		minusAreas.add(rec); // add the area
 	}
 	
 	/**
@@ -135,6 +143,11 @@ public class ClassifierMJ implements ImagePatternClassifier {
 	
 	@Override
 	public double matchAt(TestImage image, int posX, int posY) {
+		return matchAt(image, posX, posY, this.treshold);
+	}
+
+	@Override
+	public double matchAt(TestImage image, int posX, int posY, double threshold) {
 		IntegralImage integral = image.getIntegralImage();
 		int plusMean = 0;
 		int minusMean = 0;
@@ -149,13 +162,8 @@ public class ClassifierMJ implements ImagePatternClassifier {
 		
 		double correlation = Math.abs(plusMean - minusMean);
 		correlation = normalize(correlation, 0, 255);
-		return correlation;
-	}
 
-	@Override
-	public double matchAt(TestImage image, int posX, int posY, double threshold) {
-		double match = matchAt(image, posX, posY);
-		return match > threshold ?  match : 0;
+		return correlation > treshold ? correlation : 0;
 	}
 	
 	/**
@@ -175,6 +183,10 @@ public class ClassifierMJ implements ImagePatternClassifier {
 		return area;
 	}
 
+	public void setArea(Rectangle area) {
+		this.area = area;
+	}
+	
 	@Override
 	public double getWeight() {
 		return weight;
